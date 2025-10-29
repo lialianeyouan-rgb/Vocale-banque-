@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Banque Vocale IA",
+  "description": "Un prototype d'application bancaire à commande vocale utilisant l'IA pour consulter les soldes, afficher l'historique des transactions et effectuer des virements via une interface conversationnelle.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
