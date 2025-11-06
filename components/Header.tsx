@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Language, languageOptions } from '../types';
+import { getTranslation } from '../utils/translations';
 
 interface HeaderProps {
     language: Language;
@@ -12,7 +13,7 @@ export const Header: React.FC<HeaderProps> = ({ language, onLanguageChange, isOn
     return (
         <header className="flex items-center justify-between p-4 bg-gray-900/50 backdrop-blur-sm border-b border-gray-700 shadow-lg flex-shrink-0">
             <h1 className="text-xl md:text-2xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
-                Banque Vocale IA
+                {getTranslation('appTitle', language)}
             </h1>
             <div className="flex items-center space-x-4">
                 <div className="relative">
@@ -28,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({ language, onLanguageChange, isOn
                 </div>
                 <div className="flex items-center space-x-2">
                     <span className={`h-3 w-3 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
-                    <span className="hidden md:inline text-sm text-gray-400">{isOnline ? 'En ligne' : 'Hors ligne'}</span>
+                    <span className="hidden md:inline text-sm text-gray-400">{isOnline ? getTranslation('online', language) : getTranslation('offline', language)}</span>
                 </div>
             </div>
         </header>

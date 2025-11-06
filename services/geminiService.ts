@@ -1,79 +1,69 @@
+import { BankActionResult, Language, LocalFunctionCall } from '../types';
+import { getTranslation } from '../utils/translations';
 
-import { Chat, FunctionCall, GenerateContentResponse, Type } from '@google/genai';
-import { BankActionResult } from '../types';
+// A simple command parser to replace the Gemini API call.
+// It uses regular expressions to identify intents and extract arguments.
+interface CommandRule {
+    regex: RegExp;
+    action: string;
+    // Extracts arguments from the regex match array.
+    argExtractor?: (match: RegExpMatchArray) => { [key: string]: any };
+}
 
-const tools = [
-  {
-    functionDeclarations: [
-      {
-        name: 'getBalance',
-        description: 'Obtenir le solde actuel du compte de l\'utilisateur.',
-        parameters: { type: Type.OBJECT, properties: {} }
-      },
-      {
-        name: 'getStatement',
-        description: 'Obtenir l\'historique des transactions récentes de l\'utilisateur.',
-        parameters: {
-          type: Type.OBJECT,
-          properties: {
-            limit: {
-              type: Type.NUMBER,
-              description: 'Le nombre de transactions à récupérer. La valeur par défaut est 3.'
-            }
-          }
-        }
-      },
-      {
-        name: 'transferFunds',
-        description: 'Transférer de l\'argent du compte de l\'utilisateur vers un autre compte.',
-        parameters: {
-          type: Type.OBJECT,
-          properties: {
-            recipientName: {
-              type: Type.STRING,
-              description: 'Le nom du destinataire du virement.'
-            },
-            amount: {
-              type: Type.NUMBER,
-              description: 'Le montant à transférer.'
-            }
-          },
-          required: ['recipientName', 'amount']
-        }
-      }
-    ]
-  }
+// For simplicity, these regex are primarily designed for French, the default language.
+const commandRules: CommandRule[] = [
+    {
+        regex: /solde|balance/i,
+        action: 'getBalance',
+    },
+    {
+        regex: /(?:relevé|historique|transactions)(?: de (\d+))?/i,
+        action: 'getStatement',
+        argExtractor: (match) => ({ limit: match[1] ? parseInt(match[1], 10) : 5 }),
+    },
+    {
+        regex: /(?:virement|transférer|envoyer) ([\d\s]+)(?: francs)? à (\w+)/i,
+        action: 'transferFunds',
+        argExtractor: (match) => ({
+            amount: parseInt(match[1].replace(/\s/g, ''), 10),
+            recipientName: match[2],
+        }),
+    },
+    {
+        regex: /analyse|analyser (?:mes )?dépenses/i,
+        action: 'analyzeSpending',
+    },
+    {
+        regex: /(?:alerte|notifier|préviens-moi) (?:de |si je dépense plus de )([\d\s]+)(?: sur (?:la catégorie|le|la) (\w+))?/i,
+        action: 'setSpendingAlert',
+        argExtractor: (match) => ({
+            amount: parseInt(match[1].replace(/\s/g, ''), 10),
+            category: match[3] || undefined
+        }),
+    }
 ];
 
+
 export const getAiResponseAndAction = async (
-    chat: Chat, 
     prompt: string,
-    handleBankAction: (functionCall: FunctionCall) => BankActionResult
+    // The 'chat' parameter is no longer used but kept for signature consistency
+    // to minimize changes in App.tsx. It can be passed as `null`.
+    chat: any, 
+    handleBankAction: (functionCall: LocalFunctionCall) => BankActionResult,
+    language: Language
 ): Promise<{ responseText: string }> => {
-    
-    let response: GenerateContentResponse = await chat.sendMessage({
-        message: prompt,
-        config: { tools }
-    });
+    const trimmedPrompt = prompt.trim();
 
-    let functionCalls = response.functionCalls;
-
-    while (functionCalls && functionCalls.length > 0) {
-        const call = functionCalls[0];
-        const result = handleBankAction(call);
-
-        response = await chat.sendMessage({
-            message: '', // The message can be empty when sending tool responses.
-            toolResponses: [{
-                functionResponse: {
-                    name: call.name,
-                    response: { result: result.message }
-                }
-            }]
-        });
-        
-        functionCalls = response.functionCalls;
+    for (const rule of commandRules) {
+        const match = trimmedPrompt.match(rule.regex);
+        if (match) {
+            const args = rule.argExtractor ? rule.argExtractor(match) : {};
+            const result = handleBankAction({ name: rule.action, args });
+            // The handleBankAction function already returns a user-friendly message.
+            return { responseText: result.message };
+        }
     }
-    
-    return { responseText: response.text };
+
+    // If no command is matched, return a fallback message.
+    return { responseText: getTranslation('fallback', language) };
 };

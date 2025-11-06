@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   name: string;
@@ -15,20 +14,26 @@ export interface Transaction {
 }
 
 export interface Message {
-  id: string;
+  id:string;
   text: string;
   sender: 'user' | 'ai';
   recognisedText?: string;
 }
 
+export interface LocalFunctionCall {
+    name: string;
+    args: { [key: string]: any };
+}
+
 export enum Language {
-  FR = 'fr-FR',
   EN = 'en-US',
-  CI_DYU = 'ci-DYU', // Placeholder for Dioula
-  CI_BAO = 'ci-BAO', // Placeholder for Baoulé
+  FR = 'fr-FR',
+  CI_DYU = 'ci-DYU', // Placeholder pour le Dioula
+  CI_BAO = 'ci-BAO', // Placeholder pour le Baoulé
 }
 
 export const languageOptions = [
+    { value: Language.EN, label: 'English' },
     { value: Language.FR, label: 'Français' },
     { value: Language.CI_DYU, label: 'Dioula' },
     { value: Language.CI_BAO, label: 'Baoulé' },
